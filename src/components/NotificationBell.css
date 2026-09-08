@@ -1,0 +1,48 @@
+.nb-wrapper { position: relative; }
+
+/* ── Sino ── */
+.nb-bell { position:relative; background:none; border:none; color:var(--text-secondary); cursor:pointer; padding:8px; border-radius:8px; display:flex; align-items:center; transition:color .15s, background .15s; }
+.nb-bell:hover { color:var(--text-primary); background:var(--bg-tertiary); }
+.nb-badge { position:absolute; top:4px; right:4px; background:#EF4444; color:#fff; font-size:.6rem; font-weight:800; min-width:16px; height:16px; border-radius:8px; display:flex; align-items:center; justify-content:center; padding:0 3px; border:2px solid var(--bg-secondary); line-height:1; }
+
+/* ── Painel dropdown ── */
+.nb-panel { position:absolute; left:-10px; top:calc(100% + 8px); width:320px; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:14px; box-shadow:0 16px 48px rgba(0,0,0,.5); z-index:1000; display:flex; flex-direction:column; max-height:480px; overflow:hidden; animation:nb-slide-in .15s ease; }
+@keyframes nb-slide-in { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:translateY(0); } }
+
+.nb-panel-header { display:flex; align-items:center; justify-content:space-between; padding:14px 16px; border-bottom:1px solid var(--border-color); font-size:.9rem; font-weight:700; }
+.nb-clear-btn { display:flex; align-items:center; gap:5px; background:none; border:none; color:var(--text-muted); font-size:.75rem; cursor:pointer; transition:color .15s; }
+.nb-clear-btn:hover { color:var(--text-primary); }
+
+.nb-panel-body { flex:1; overflow-y:auto; padding:8px; display:flex; flex-direction:column; gap:6px; }
+.nb-empty { display:flex; flex-direction:column; align-items:center; text-align:center; gap:8px; padding:32px 16px; }
+.nb-empty-icon { color:var(--text-muted); opacity:.3; }
+.nb-empty p { font-size:.88rem; font-weight:600; color:var(--text-secondary); }
+.nb-empty span { font-size:.75rem; color:var(--text-muted); line-height:1.5; }
+
+.nb-panel-footer { padding:10px 12px; border-top:1px solid var(--border-color); }
+.nb-test-btn { width:100%; background:none; border:1px solid var(--border-color); color:var(--text-muted); font-size:.75rem; border-radius:8px; padding:7px; cursor:pointer; transition:all .15s; }
+.nb-test-btn:hover { color:var(--ai-accent); border-color:var(--ai-accent); }
+
+/* ── Card de notificação ── */
+.nb-card { display:flex; align-items:flex-start; gap:10px; background:var(--bg-tertiary); border-radius:10px; padding:10px 12px; border-left-width:3px; border-top:none; border-right:none; border-bottom:none; border-style:solid; }
+.nb-card-icon { width:30px; height:30px; border-radius:8px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.nb-card-body { flex:1; min-width:0; }
+.nb-card-title { font-size:.83rem; font-weight:700; margin-bottom:3px; line-height:1.3; }
+.nb-card-text  { font-size:.75rem; color:var(--text-secondary); line-height:1.4; margin-bottom:4px; }
+.nb-card-age   { font-size:.68rem; color:var(--text-muted); }
+.nb-card-dismiss { background:none; border:none; color:var(--text-muted); cursor:pointer; padding:2px; display:flex; border-radius:4px; flex-shrink:0; transition:color .15s; }
+.nb-card-dismiss:hover { color:var(--text-primary); }
+
+/* ── Backdrop ── */
+.nb-backdrop { position:fixed; inset:0; z-index:999; }
+
+/* ── Toast flutuante ── */
+.nb-toast { position:fixed; bottom:24px; right:24px; z-index:9999; width:320px; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:12px; padding:14px 16px; box-shadow:0 12px 40px rgba(0,0,0,.5); display:flex; align-items:flex-start; gap:12px; cursor:pointer; animation:nb-toast-in .25s ease; }
+@keyframes nb-toast-in { from { opacity:0; transform:translateX(20px); } to { opacity:1; transform:translateX(0); } }
+.nb-toast-warning { border-left:3px solid #F59E0B; }
+.nb-toast-danger  { border-left:3px solid #EF4444; }
+.nb-toast-info    { border-left:3px solid #38BDF8; }
+.nb-toast-content { flex:1; }
+.nb-toast-content strong { display:block; font-size:.85rem; font-weight:700; margin-bottom:4px; }
+.nb-toast-content p { font-size:.77rem; color:var(--text-secondary); line-height:1.4; margin:0; }
+.nb-toast-close { background:none; border:none; color:var(--text-muted); cursor:pointer; padding:2px; display:flex; flex-shrink:0; }

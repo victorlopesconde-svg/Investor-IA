@@ -1,0 +1,122 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Colors - Institutional Dark Mode */
+  --bg-primary: #0A0F1C;
+  --bg-secondary: #121A2F;
+  --bg-tertiary: #1E293B;
+  
+  /* Text Colors */
+  --text-primary: #F8FAFC;
+  --text-secondary: #94A3B8;
+  --text-muted: #64748B;
+  
+  /* Semantic Signals (Strict Usage) */
+  --signal-profit: #10B981;
+  --signal-profit-bg: rgba(16, 185, 129, 0.15);
+  --signal-loss: #EF4444;
+  --signal-loss-bg: rgba(239, 68, 68, 0.15);
+  --signal-warning: #F59E0B;
+  
+  /* AI Accents */
+  --ai-accent: #FBBF24; /* Amber/Yellow */
+  --ai-accent-hover: #F59E0B;
+  --ai-glow: rgba(251, 191, 36, 0.25);
+  
+  /* Borders and UI */
+  --border-color: #334155;
+  --border-light: #475569;
+  
+  /* Typography */
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-heading: 'Outfit', system-ui, -apple-system, sans-serif;
+}
+
+/* ── Light Mode Overrides ───────────────────────────────────────── */
+[data-theme="light"] {
+  --bg-primary:    #F1F5F9;
+  --bg-secondary:  #FFFFFF;
+  --bg-tertiary:   #E2E8F0;
+
+  --text-primary:   #0F172A;
+  --text-secondary: #475569;
+  --text-muted:     #94A3B8;
+
+  --border-color: #CBD5E1;
+  --border-light: #94A3B8;
+
+  --ai-accent:       #D97706;
+  --ai-accent-hover: #B45309;
+  --ai-glow:         rgba(217, 119, 6, 0.18);
+
+  --signal-profit-bg: rgba(16, 185, 129, 0.12);
+  --signal-loss-bg:   rgba(239, 68, 68, 0.12);
+}
+
+/* Smooth transition when switching themes */
+*, *::before, *::after {
+  transition: background-color 0.25s ease, border-color 0.25s ease, color 0.15s ease;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* Base Animations */
+@keyframes pulse-glow {
+  0% { box-shadow: 0 0 0 0 var(--ai-glow); }
+  70% { box-shadow: 0 0 0 6px rgba(139, 92, 246, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(139, 92, 246, 0); }
+}
+
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Glassmorphism Utility */
+.glass-panel {
+  background: rgba(18, 26, 47, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+}
+
+/* Scrollbar styling for dark mode */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-primary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--bg-tertiary);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--border-light);
+}

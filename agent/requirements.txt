@@ -1,0 +1,24 @@
+agno>=2.0.0,<3.0.0  # 3.x quebra a API do Agent (enable_user_memories, Knowledge.add_content)
+yfinance
+duckduckgo-search
+pydantic
+pydantic-settings
+python-dotenv
+fastapi
+uvicorn[standard]
+httpx
+slowapi
+pyjwt
+passlib[bcrypt]
+bcrypt
+cryptography
+python-multipart
+openai
+apscheduler
+ddgs
+sqlalchemy
+chromadb
+pypdf
+groq
+google-genai
+ollama

@@ -1,0 +1,323 @@
+/* ── StockModal — painel lateral premium ─────────────────────────────────── */
+
+/* Overlay / backdrop */
+.sm-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  z-index: 1000;
+  display: flex;
+  justify-content: flex-end;
+  animation: sm-fade-in 0.2s ease;
+}
+
+@keyframes sm-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* Painel lateral */
+.sm-panel {
+  width: 420px;
+  max-width: 95vw;
+  height: 100vh;
+  background: #0f1117;
+  border-left: 1px solid rgba(245, 158, 11, 0.2);
+  display: flex;
+  flex-direction: column;
+  animation: sm-slide-in 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  overflow: hidden;
+}
+
+@keyframes sm-slide-in {
+  from { transform: translateX(100%); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+
+/* ── Header ── */
+.sm-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 20px 20px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(135deg, #13151e 0%, #0f1117 100%);
+  flex-shrink: 0;
+}
+
+.sm-header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  flex: 1;
+  min-width: 0;
+}
+
+.sm-ticker-badge {
+  display: inline-flex;
+  align-items: center;
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  border-radius: 6px;
+  padding: 2px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  width: fit-content;
+}
+
+.sm-company-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #e2e8f0;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sm-sector {
+  font-size: 11px;
+  color: #64748b;
+}
+
+.sm-header-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  flex-shrink: 0;
+  margin-left: 12px;
+}
+
+.sm-price-block {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+}
+
+.sm-price {
+  font-size: 18px;
+  font-weight: 700;
+  color: #f1f5f9;
+  font-variant-numeric: tabular-nums;
+}
+
+.sm-variation {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 4px;
+  padding: 1px 6px;
+}
+
+.sm-variation.positive { color: #34d399; background: rgba(52, 211, 153, 0.1); }
+.sm-variation.negative { color: #f87171; background: rgba(248, 113, 113, 0.1); }
+
+.sm-close-btn {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: #94a3b8;
+  cursor: pointer;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+
+.sm-close-btn:hover {
+  background: rgba(248, 113, 113, 0.15);
+  border-color: rgba(248, 113, 113, 0.3);
+  color: #f87171;
+}
+
+/* ── Body ── */
+.sm-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(245, 158, 11, 0.2) transparent;
+}
+
+.sm-body::-webkit-scrollbar { width: 4px; }
+.sm-body::-webkit-scrollbar-track { background: transparent; }
+.sm-body::-webkit-scrollbar-thumb { background: rgba(245, 158, 11, 0.2); border-radius: 2px; }
+
+/* ── Grupos ── */
+.sm-group { display: flex; flex-direction: column; gap: 8px; }
+
+.sm-group-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: #64748b;
+  padding-bottom: 2px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* ── Cards grid ── */
+.sm-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.sm-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 10px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  transition: border-color 0.15s, background 0.15s;
+  border-left: 3px solid transparent;
+}
+
+.sm-card:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.sm-card-valuation     { border-left-color: #8b5cf6; }
+.sm-card-rentabilidade { border-left-color: #10b981; }
+.sm-card-dividendos    { border-left-color: #f59e0b; }
+.sm-card-resultado     { border-left-color: #3b82f6; }
+.sm-card-divida        { border-left-color: #f87171; }
+.sm-card-risco         { border-left-color: #64748b; }
+
+.sm-card-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+.sm-card-value {
+  font-size: 15px;
+  font-weight: 700;
+  color: #e2e8f0;
+  font-variant-numeric: tabular-nums;
+}
+
+.sm-card-desc {
+  font-size: 10px;
+  color: #475569;
+  line-height: 1.3;
+  margin-top: 1px;
+}
+
+/* ── Notícias ── */
+.sm-news-list { display: flex; flex-direction: column; gap: 8px; }
+
+.sm-news-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-left: 3px solid rgba(245, 158, 11, 0.5);
+  border-radius: 10px;
+  padding: 12px 14px;
+  text-decoration: none;
+  transition: all 0.15s;
+  position: relative;
+  cursor: pointer;
+}
+
+.sm-news-card:hover {
+  background: rgba(245, 158, 11, 0.06);
+  border-color: rgba(245, 158, 11, 0.25);
+}
+
+.sm-news-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.sm-news-fonte {
+  font-size: 10px;
+  font-weight: 600;
+  color: #f59e0b;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+.sm-news-data {
+  font-size: 10px;
+  color: #475569;
+}
+
+.sm-news-titulo {
+  font-size: 13px;
+  color: #cbd5e1;
+  line-height: 1.4;
+  margin: 0;
+  padding-right: 18px;
+}
+
+.sm-news-icon {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  color: #475569;
+}
+
+.sm-no-news {
+  font-size: 13px;
+  color: #475569;
+  text-align: center;
+  padding: 16px 0;
+}
+
+/* ── Erro ── */
+.sm-error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  font-size: 14px;
+  color: #f87171;
+  text-align: center;
+  padding: 32px;
+}
+
+/* ── Skeleton loading ── */
+.sm-loading-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.sm-skeleton {
+  background: linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.04) 75%);
+  background-size: 200% 100%;
+  animation: sm-shimmer 1.4s infinite;
+  border-radius: 10px;
+}
+
+@keyframes sm-shimmer {
+  from { background-position: 200% 0; }
+  to   { background-position: -200% 0; }
+}
+
+.sm-skeleton-name { height: 18px; width: 70%; border-radius: 6px; }
+.sm-skeleton-card { height: 80px; }
