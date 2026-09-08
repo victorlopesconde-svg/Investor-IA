@@ -1,0 +1,14 @@
+node_modules
+dist
+.venv
+agent/__pycache__
+agent/tmp
+agent/notifications.db
+agent/keys
+agent/webhook_payload.json
+.env
+.git
+site_inpirations
+video
+Skills
+*.md
