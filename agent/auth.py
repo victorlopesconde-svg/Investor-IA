@@ -50,7 +50,7 @@ def _load_keys():
         logger.info("[Auth] Chaves RSA carregadas das variáveis de ambiente.")
     else:
         # Tenta carregar de arquivos
-        keys_dir = os.path.join(os.path.dirname(__file__), "keys")
+        keys_dir = os.path.join(os.getenv("DATA_DIR", os.path.dirname(__file__)), "keys")
         priv_path = os.path.join(keys_dir, "private.pem")
         pub_path = os.path.join(keys_dir, "public.pem")
 
@@ -84,7 +84,7 @@ def generate_rsa_keys():
     _private_key = key
     _public_key = key.public_key()
 
-    keys_dir = os.path.join(os.path.dirname(__file__), "keys")
+    keys_dir = os.path.join(os.getenv("DATA_DIR", os.path.dirname(__file__)), "keys")
     os.makedirs(keys_dir, exist_ok=True)
 
     priv_pem = key.private_bytes(

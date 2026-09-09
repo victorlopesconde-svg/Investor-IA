@@ -17,7 +17,10 @@ import threading
 from datetime import datetime, timedelta
 from typing import List, Dict, Optional, Any
 
-DB_PATH = os.path.join(os.path.dirname(__file__), "notifications.db")
+# DATA_DIR aponta para um disco persistente em produção (Render); por padrão
+# usa agent/, mantendo o comportamento local inalterado.
+DATA_DIR = os.getenv("DATA_DIR", os.path.dirname(__file__))
+DB_PATH = os.path.join(DATA_DIR, "notifications.db")
 
 _lock = threading.Lock()
 
