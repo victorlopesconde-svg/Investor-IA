@@ -539,7 +539,7 @@ def logout(request: Request, response: Response, background_tasks: BackgroundTas
 
 
 # ── Endpoints Gerais ──────────────────────────────────────────────────────────
-@app.get("/")
+@app.get("/api/status")
 def root():
     return {"status": "InvestorIA API online 🚀", "docs": "/docs"}
 
