@@ -15,9 +15,15 @@ npm run build      # gera dist/, que o backend passa a servir automaticamente
 npm run lint
 
 # Backend (porta 8000)
+docker compose up -d                 # Postgres de dev (precisa estar no ar antes da API)
 .venv/bin/python start_api.py        # entrypoint oficial (faz chdir para agent/)
 # ou: cd agent && ../.venv/bin/uvicorn api:app --port 8000
 ```
+
+O `.env` já aponta `DATABASE_URL` para o Postgres do `docker-compose.yml`; a URL de produção fica
+logo abaixo, **comentada**. O padrão é dev justamente para que rodar a API local não escreva em dados
+reais de cliente — só descomente a de produção para uma tarefa pontual, e volte atrás depois.
+Banco de dev vazio é normal: `init_db()` cria o schema no startup.
 
 O venv Python fica em `.venv/` na raiz (Python 3.11 — **não** use 3.14, várias deps não compilam).
 Deps do backend: `agent/requirements.txt`.

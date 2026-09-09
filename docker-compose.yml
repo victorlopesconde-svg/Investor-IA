@@ -1,0 +1,27 @@
+# Postgres de desenvolvimento local — espelha a versão usada em produção (Render).
+# Sobe com:  docker compose up -d
+# Derruba:   docker compose down          (os dados ficam no volume)
+#            docker compose down -v       (apaga os dados também)
+services:
+  postgres:
+    image: postgres:18
+    container_name: investoria-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: investoria
+      POSTGRES_PASSWORD: investoria_dev
+      POSTGRES_DB: investoria_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      # Monta o diretório pai, não .../data: a imagem do PG 18 mudou o PGDATA
+      # de lugar, e assim o volume funciona igual em qualquer versão.
+      - investoria_pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U investoria -d investoria_dev"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  investoria_pgdata:
