@@ -17,6 +17,7 @@ openai
 apscheduler
 ddgs
 sqlalchemy
+psycopg[binary]
 chromadb
 pypdf
 groq

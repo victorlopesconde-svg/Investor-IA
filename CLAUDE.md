@@ -34,7 +34,7 @@ src/                 React 19 + react-router-dom 7, CSS puro (sem Tailwind build
 agent/               Backend Python — FastAPI + Agno
   api.py             (~2.6k linhas) TODAS as rotas, num único módulo. Ponto central do sistema.
   agent.py           Definição do agente Agno: SYSTEM_PROMPT, tools, escolha de LLM, RAG
-  notifications_db.py Camada SQLite única (todas as tabelas e queries)
+  notifications_db.py Camada de banco única — PostgreSQL via psycopg (todas as tabelas e queries)
 dist/                Build do frontend; se existir, api.py o serve como SPA fallback
 ```
 
@@ -43,10 +43,24 @@ com um `_lock` global. Ao adicionar uma rota, siga o padrão existente no mesmo 
 módulos novos.
 
 ### Banco de dados
-SQLite em `agent/notifications.db`, criado por `init_db()` no lifespan. Tabelas: `users`, `alerts`,
-`alert_cooldowns`, `notification_history`, `ai_tasks`, `documents`, `document_chunks`,
-`conversations`, `messages`, `refresh_tokens`, `audit_logs`.
-`agent/tmp/data.db` e `agent/tmp/chromaDB/` pertencem ao Agno (sessões e vetores do RAG), não ao app.
+**PostgreSQL**, apontado por `DATABASE_URL`, com schema criado por `init_db()` no lifespan. Tabelas:
+`users`, `alerts`, `alert_cooldowns`, `notification_history`, `ai_tasks`, `documents`,
+`document_chunks`, `conversations`, `messages`, `refresh_tokens`, `audit_logs`.
+`agent/tmp/data.db` e `agent/tmp/chromaDB/` continuam sendo SQLite/Chroma do Agno (sessões e vetores
+do RAG), não do app — e por viverem no filesystem efêmero do container, se perdem a cada deploy.
+
+O projeto veio do SQLite e o SQL cru ainda usa placeholders `?`: a classe `_Connection` em
+`notifications_db.py` é uma fachada fina sobre o psycopg que traduz `?` → `%s` e expõe
+`execute/commit/close`, para que `api.py`, `oauth.py` e `token_manager.py` — que abrem conexão
+direto via `_connect()` — sigam funcionando sem alteração. Ao escrever SQL novo, mantenha `?`.
+Cuidado com dialeto: nada de `INSERT OR REPLACE` (use `ON CONFLICT ... DO UPDATE`), `AUTOINCREMENT`
+(use `SERIAL`) ou `datetime('now')` (use `to_char(now(), 'YYYY-MM-DD HH24:MI:SS')`, que preserva o
+formato de texto que o código faz parse com `datetime.fromisoformat`). Timestamps em epoch de
+milissegundos (`conversations.updated_at`, `messages.timestamp`) precisam de `BIGINT` — `INTEGER` no
+Postgres é de 4 bytes e estoura.
+
+`agent/migrate_sqlite_to_postgres.py` copia um `notifications.db` legado para o Postgres; é
+idempotente (`ON CONFLICT DO NOTHING`) e reposiciona as sequences das PKs `SERIAL`.
 
 ### Camada de IA (`agent/agent.py`)
 Provedor escolhido por `MODEL_PROVIDER`, com autodetecção na ordem Groq → Gemini → OpenAI → Ollama.
@@ -151,8 +165,11 @@ As páginas `aprender/*` são tutoriais estáticos, sem backend.
 
 ## Variáveis de ambiente (`.env` na raiz)
 
-`GROQ_API_KEY` + `MODEL_PROVIDER` + `GROQ_MODEL` (produção), `OPENAI_API_KEY` (embeddings/RAG e
-filtro cognitivo), `JWT_SECRET`, `ENCRYPTION_KEY`, `GOOGLE_CLIENT_ID`, `ALLOWED_ORIGINS`,
+`DATABASE_URL` (**obrigatória** — string de conexão do PostgreSQL; sem ela toda rota que toca o banco
+falha), `GROQ_API_KEY` + `MODEL_PROVIDER` + `GROQ_MODEL` (produção), `OPENAI_API_KEY` (embeddings/RAG
+e filtro cognitivo), `RSA_PRIVATE_KEY`/`RSA_PUBLIC_KEY` (em produção defina-as: sem elas as chaves são
+regeradas a cada deploy no filesystem efêmero e todos os JWTs em circulação são invalidados),
+`JWT_SECRET`, `ENCRYPTION_KEY`, `GOOGLE_CLIENT_ID`, `ALLOWED_ORIGINS`,
 `COOKIE_SECURE` (default `true`; só põe `false` em dev HTTP se necessário),
 `TURNSTILE_SECRET_KEY`/`VITE_TURNSTILE_SITE_KEY` (CAPTCHA opcional no registro/login),
 `KIWIFY_WEBHOOK_TOKEN` (obrigatória para `/api/webhooks/create-user` — sem ela, a rota recusa tudo).

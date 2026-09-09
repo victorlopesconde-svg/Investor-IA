@@ -10,25 +10,54 @@ Persiste:
   - conversations (sessões de chat assistido por IA)
   - messages (histórico de mensagens do chat)
 """
-import sqlite3
 import json
 import os
 import threading
 from datetime import datetime, timedelta
 from typing import List, Dict, Optional, Any
 
-# DATA_DIR aponta para um disco persistente em produção (Render); por padrão
-# usa agent/, mantendo o comportamento local inalterado.
-DATA_DIR = os.getenv("DATA_DIR", os.path.dirname(__file__))
-DB_PATH = os.path.join(DATA_DIR, "notifications.db")
+import psycopg
+from psycopg.rows import dict_row
+
+DATABASE_URL = os.getenv("DATABASE_URL", "")
 
 _lock = threading.Lock()
 
 
-def _connect() -> sqlite3.Connection:
-    conn = sqlite3.connect(DB_PATH, check_same_thread=False)
-    conn.row_factory = sqlite3.Row
-    return conn
+class _Connection:
+    """
+    Fachada fina sobre o psycopg com a mesma superfície do sqlite3.Connection
+    já usada em todo o projeto (execute/commit/close, com o retorno do execute
+    expondo fetchone/fetchall). Assim api.py e oauth.py, que abrem conexão
+    direto via _connect(), seguem funcionando sem alteração.
+    """
+
+    def __init__(self, raw: "psycopg.Connection"):
+        self._raw = raw
+
+    def execute(self, sql: str, params=None):
+        # O SQL do projeto usa placeholders '?' (herança do SQLite); psycopg usa '%s'.
+        sql = sql.replace("?", "%s")
+        if params:
+            return self._raw.execute(sql, tuple(params))
+        # Sem parâmetros o psycopg aceita vários statements num único execute
+        # (é o que o init_db precisa para rodar o bloco inteiro de DDL).
+        return self._raw.execute(sql)
+
+    def commit(self) -> None:
+        self._raw.commit()
+
+    def close(self) -> None:
+        self._raw.close()
+
+
+def _connect() -> _Connection:
+    if not DATABASE_URL:
+        raise RuntimeError(
+            "DATABASE_URL não configurada. O InvestorIA usa PostgreSQL — "
+            "defina a variável no .env (dev) ou no painel do Render (produção)."
+        )
+    return _Connection(psycopg.connect(DATABASE_URL, row_factory=dict_row))
 
 
 def init_db() -> None:
@@ -36,29 +65,29 @@ def init_db() -> None:
     with _lock:
         conn = _connect()
         try:
-            conn.executescript("""
+            conn.execute("""
                 -- Tabelas Legadas de Alertas
                 CREATE TABLE IF NOT EXISTS alerts (
                     id          TEXT PRIMARY KEY,
                     client_id   TEXT NOT NULL,
                     ticker      TEXT NOT NULL,
                     condition   TEXT NOT NULL,
-                    threshold   REAL NOT NULL,
+                    threshold   DOUBLE PRECISION NOT NULL,
                     active      INTEGER DEFAULT 1,
-                    created_at  TEXT DEFAULT (datetime('now'))
+                    created_at  TEXT DEFAULT to_char(now(), 'YYYY-MM-DD HH24:MI:SS')
                 );
 
                 CREATE TABLE IF NOT EXISTS notification_history (
-                    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                    id          SERIAL PRIMARY KEY,
                     client_id   TEXT NOT NULL,
                     ticker      TEXT NOT NULL,
                     title       TEXT NOT NULL,
                     body        TEXT NOT NULL,
                     severity    TEXT DEFAULT 'info',
                     condition   TEXT,
-                    value       REAL,
-                    price       REAL,
-                    sent_at     TEXT DEFAULT (datetime('now')),
+                    value       DOUBLE PRECISION,
+                    price       DOUBLE PRECISION,
+                    sent_at     TEXT DEFAULT to_char(now(), 'YYYY-MM-DD HH24:MI:SS'),
                     read        INTEGER DEFAULT 0
                 );
 
@@ -76,7 +105,7 @@ def init_db() -> None:
                     role          TEXT,
                     photo_url     TEXT,
                     settings      TEXT,
-                    created_at    TEXT DEFAULT (datetime('now'))
+                    created_at    TEXT DEFAULT to_char(now(), 'YYYY-MM-DD HH24:MI:SS')
                 );
 
                 -- Nova Tabela: Filas de IA (Task Queue)
@@ -86,8 +115,8 @@ def init_db() -> None:
                     status        TEXT DEFAULT 'processing',
                     result        TEXT,
                     error         TEXT,
-                    created_at    TEXT DEFAULT (datetime('now')),
-                    updated_at    TEXT DEFAULT (datetime('now'))
+                    created_at    TEXT DEFAULT to_char(now(), 'YYYY-MM-DD HH24:MI:SS'),
+                    updated_at    TEXT DEFAULT to_char(now(), 'YYYY-MM-DD HH24:MI:SS')
                 );
 
                 -- Novas Tabelas: Documentos (Páginas RAG)
@@ -97,12 +126,12 @@ def init_db() -> None:
                     filename     TEXT NOT NULL,
                     info         TEXT,
                     content_text TEXT NOT NULL,
-                    uploaded_at  TEXT DEFAULT (datetime('now'))
+                    uploaded_at  TEXT DEFAULT to_char(now(), 'YYYY-MM-DD HH24:MI:SS')
                 );
 
                 -- Chunks com embeddings para RAG
                 CREATE TABLE IF NOT EXISTS document_chunks (
-                    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+                    id           SERIAL PRIMARY KEY,
                     session_id   TEXT NOT NULL,
                     chunk_index  INTEGER NOT NULL,
                     chunk_text   TEXT NOT NULL,
@@ -112,11 +141,13 @@ def init_db() -> None:
                 CREATE INDEX IF NOT EXISTS idx_chunks_session ON document_chunks(session_id);
 
                 -- Novas Tabelas: Chat
+                -- updated_at/timestamp guardam epoch em milissegundos (Date.now() do
+                -- frontend), que estoura o INTEGER de 4 bytes do Postgres — por isso BIGINT.
                 CREATE TABLE IF NOT EXISTS conversations (
                     id          TEXT PRIMARY KEY,
                     client_id   TEXT NOT NULL,
                     title       TEXT NOT NULL,
-                    updated_at  INTEGER NOT NULL
+                    updated_at  BIGINT NOT NULL
                 );
 
                 CREATE TABLE IF NOT EXISTS messages (
@@ -125,7 +156,7 @@ def init_db() -> None:
                     role            TEXT NOT NULL,
                     text            TEXT NOT NULL,
                     tickers         TEXT,
-                    timestamp       INTEGER NOT NULL,
+                    timestamp       BIGINT NOT NULL,
                     FOREIGN KEY(conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
                 );
 
@@ -136,13 +167,13 @@ def init_db() -> None:
                     token_hash  TEXT NOT NULL,
                     expires_at  TEXT NOT NULL,
                     revoked     INTEGER DEFAULT 0,
-                    created_at  TEXT DEFAULT (datetime('now'))
+                    created_at  TEXT DEFAULT to_char(now(), 'YYYY-MM-DD HH24:MI:SS')
                 );
 
                 -- Tabela Ciber: Audit Logs (Pilar 6)
                 CREATE TABLE IF NOT EXISTS audit_logs (
-                    id          INTEGER PRIMARY KEY AUTOINCREMENT,
-                    timestamp   TEXT DEFAULT (datetime('now')),
+                    id          SERIAL PRIMARY KEY,
+                    timestamp   TEXT DEFAULT to_char(now(), 'YYYY-MM-DD HH24:MI:SS'),
                     actor_id    TEXT NOT NULL,
                     action      TEXT NOT NULL,
                     resource_id TEXT,
@@ -167,10 +198,7 @@ def init_db() -> None:
             for col, col_type in [("token_limit", "INTEGER DEFAULT 0"),
                                   ("tokens_used", "INTEGER DEFAULT 0"),
                                   ("token_reset_date", "TEXT")]:
-                try:
-                    conn.execute(f"ALTER TABLE users ADD COLUMN {col} {col_type}")
-                except sqlite3.OperationalError:
-                    pass  # Coluna já existe
+                conn.execute(f"ALTER TABLE users ADD COLUMN IF NOT EXISTS {col} {col_type}")
             conn.commit()
         finally:
             conn.close()
@@ -188,9 +216,15 @@ def sync_alerts(client_id: str, alerts: List[Dict]) -> None:
             conn.execute("DELETE FROM alerts WHERE client_id = ?", (client_id,))
             for a in alerts:
                 conn.execute(
-                    """INSERT OR REPLACE INTO alerts
+                    """INSERT INTO alerts
                        (id, client_id, ticker, condition, threshold, active)
-                       VALUES (?, ?, ?, ?, ?, ?)""",
+                       VALUES (?, ?, ?, ?, ?, ?)
+                       ON CONFLICT (id) DO UPDATE SET
+                           client_id = EXCLUDED.client_id,
+                           ticker    = EXCLUDED.ticker,
+                           condition = EXCLUDED.condition,
+                           threshold = EXCLUDED.threshold,
+                           active    = EXCLUDED.active""",
                     (
                         str(a.get("id", "")),
                         client_id,
@@ -239,8 +273,9 @@ def set_cooldown(alert_id: str) -> None:
         conn = _connect()
         try:
             conn.execute(
-                """INSERT OR REPLACE INTO alert_cooldowns (alert_id, last_fired)
-                   VALUES (?, ?)""",
+                """INSERT INTO alert_cooldowns (alert_id, last_fired)
+                   VALUES (?, ?)
+                   ON CONFLICT (alert_id) DO UPDATE SET last_fired = EXCLUDED.last_fired""",
                 (alert_id, datetime.utcnow().isoformat()),
             )
             conn.commit()
@@ -343,10 +378,18 @@ def save_user_profile(client_id: str, profile_data: dict) -> None:
                 settings_str = encrypt_field(settings_str)
             except Exception:
                 pass  # Se encriptação falhar, salva em texto (graceful degradation)
+            # O DO UPDATE toca só as colunas de perfil: created_at, password_hash e
+            # as colunas de cota (token_limit/tokens_used/token_reset_date) sobrevivem.
             conn.execute(
-                """INSERT OR REPLACE INTO users
-                   (client_id, name, email, role, photo_url, settings, created_at)
-                   VALUES (?, ?, ?, ?, ?, ?, COALESCE((SELECT created_at FROM users WHERE client_id = ?), datetime('now')))""",
+                """INSERT INTO users
+                   (client_id, name, email, role, photo_url, settings)
+                   VALUES (?, ?, ?, ?, ?, ?)
+                   ON CONFLICT (client_id) DO UPDATE SET
+                       name      = EXCLUDED.name,
+                       email     = EXCLUDED.email,
+                       role      = EXCLUDED.role,
+                       photo_url = EXCLUDED.photo_url,
+                       settings  = EXCLUDED.settings""",
                 (
                     client_id,
                     profile_data.get("name", ""),
@@ -354,7 +397,6 @@ def save_user_profile(client_id: str, profile_data: dict) -> None:
                     profile_data.get("role", "pro"),
                     profile_data.get("photo_url") or profile_data.get("photo"),
                     settings_str,
-                    client_id,
                 ),
             )
             conn.commit()
@@ -371,9 +413,14 @@ def save_document_session(session_id: str, client_id: str, filename: str, info: 
         conn = _connect()
         try:
             conn.execute(
-                """INSERT OR REPLACE INTO documents
+                """INSERT INTO documents
                    (session_id, client_id, filename, info, content_text)
-                   VALUES (?, ?, ?, ?, ?)""",
+                   VALUES (?, ?, ?, ?, ?)
+                   ON CONFLICT (session_id) DO UPDATE SET
+                       client_id    = EXCLUDED.client_id,
+                       filename     = EXCLUDED.filename,
+                       info         = EXCLUDED.info,
+                       content_text = EXCLUDED.content_text""",
                 (session_id, client_id, filename, info, content_text),
             )
             conn.commit()
@@ -515,8 +562,12 @@ def save_conversation_full(conv: dict, client_id: str) -> None:
             updated_at = conv.get("updatedAt") or conv.get("updated_at") or int(datetime.utcnow().timestamp() * 1000)
             
             conn.execute(
-                """INSERT OR REPLACE INTO conversations (id, client_id, title, updated_at)
-                   VALUES (?, ?, ?, ?)""",
+                """INSERT INTO conversations (id, client_id, title, updated_at)
+                   VALUES (?, ?, ?, ?)
+                   ON CONFLICT (id) DO UPDATE SET
+                       client_id  = EXCLUDED.client_id,
+                       title      = EXCLUDED.title,
+                       updated_at = EXCLUDED.updated_at""",
                 (conv_id, client_id, title, updated_at),
             )
             
@@ -530,8 +581,14 @@ def save_conversation_full(conv: dict, client_id: str) -> None:
                 
                 tickers_str = json.dumps(msg.get("tickers", []))
                 conn.execute(
-                    """INSERT OR REPLACE INTO messages (id, conversation_id, role, text, tickers, timestamp)
-                       VALUES (?, ?, ?, ?, ?, ?)""",
+                    """INSERT INTO messages (id, conversation_id, role, text, tickers, timestamp)
+                       VALUES (?, ?, ?, ?, ?, ?)
+                       ON CONFLICT (id) DO UPDATE SET
+                           conversation_id = EXCLUDED.conversation_id,
+                           role            = EXCLUDED.role,
+                           text            = EXCLUDED.text,
+                           tickers         = EXCLUDED.tickers,
+                           timestamp       = EXCLUDED.timestamp""",
                     (
                         msg_id,
                         conv_id,
@@ -601,8 +658,9 @@ def complete_ai_task(task_id: str, result: str, status: str = "completed", error
         conn = _connect()
         try:
             conn.execute(
-                """UPDATE ai_tasks 
-                   SET status = ?, result = ?, error = ?, updated_at = datetime('now') 
+                """UPDATE ai_tasks
+                   SET status = ?, result = ?, error = ?,
+                       updated_at = to_char(now(), 'YYYY-MM-DD HH24:MI:SS')
                    WHERE task_id = ?""",
                 (status, result, error, task_id)
             )

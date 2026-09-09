@@ -2,8 +2,6 @@
 token_manager.py
 Gerencia a contagem, reset e validação de limites de tokens de IA para cada plano de usuário.
 """
-import sqlite3
-import os
 import logging
 from datetime import datetime, timedelta, timezone
 from fastapi import HTTPException
@@ -20,11 +18,9 @@ ROLE_LIMITS = {
 }
 
 def get_db_connection():
-    # Caminho absoluto para o banco central
-    db_path = os.path.join(os.path.dirname(__file__), "notifications.db")
-    conn = sqlite3.connect(db_path)
-    conn.row_factory = sqlite3.Row
-    return conn
+    # Banco central único (PostgreSQL), compartilhado com notifications_db.py
+    import notifications_db
+    return notifications_db._connect()
 
 def check_and_reset_tokens(client_id: str) -> dict:
     """

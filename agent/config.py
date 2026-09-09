@@ -30,6 +30,9 @@ def validate_environment():
         if not os.getenv("OPENAI_API_KEY"):
             logging.warning("[Security] Nenhuma chave da OpenAI detectada. Algumas funcionalidades de IA falharão.")
 
+        if not os.getenv("DATABASE_URL"):
+            logging.critical("[DB] DATABASE_URL não configurada. O banco (PostgreSQL) está inacessível — login, cadastro e alertas vão falhar.")
+
         # ── Ciber: Validação de variáveis de segurança ────────────────────
         if not os.getenv("ENCRYPTION_KEY"):
             logging.warning("[Ciber] ENCRYPTION_KEY não configurada. Criptografia AES-256 desabilitada (graceful degradation).")
